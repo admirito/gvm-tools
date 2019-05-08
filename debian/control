@@ -1,0 +1,54 @@
+Source: gvm-tools
+Section: admin
+Priority: optional
+Maintainer: Mohammad Razavi <mrazavi64@gmail.com>
+Build-Depends: debhelper (>= 10), dh-python, python3-all, python3-setuptools, python3-gvm
+# python3-sphinx, python3-sphinxcontrib.napoleon
+Standards-Version: 4.1.2
+Homepage: https://community.greenbone.net/
+X-Python3-Version: >= 3.2
+Vcs-Git: https://github.com/admirito/gvm-tools.git
+Vcs-Browser: https://github.com/admirito/gvm-tools
+Testsuite: autopkgtest-pkg-python
+
+Package: gvm-tools
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}
+Suggests: gvm-tools-doc
+Description: remote network security auditor - tools
+ The Greenbone Vulnerability Management Solution (previously known as
+ Open Vulnerability Assessment System) is a modular security auditing
+ tool, used for testing remote systems for vulnerabilities that should
+ be fixed.
+ .
+ This package contains the Greenbone Vulnerability Management Tools or
+ gvm-tools i.e. a collection of tools that help with remote
+ controlling Greenbone Vulnerability Manager (GVM). The tools
+ essentially aid accessing the communication protocols GMP (Greenbone
+ Management Protocol) and OSP (Open Scanner Protocol).
+ .
+ This module is comprised of interactive and non-interactive clients.
+ The programming language Python is supported directly for interactive
+ scripting.  But it is also possible to issue remote GMP/OSP commands
+ without programming in Python.
+
+# Package: gvm-tools-doc
+# Architecture: all
+# Section: doc
+# Depends: ${sphinxdoc:Depends}, ${misc:Depends}
+# Description: remote network security auditor - tools docs
+#  The Greenbone Vulnerability Management Solution (previously known as
+#  Open Vulnerability Assessment System) is a modular security auditing
+#  tool, used for testing remote systems for vulnerabilities that should
+#  be fixed.
+#  .
+#  This package contains the Greenbone Vulnerability Management Tools or
+#  gvm-tools i.e. a collection of tools that help with remote
+#  controlling Greenbone Vulnerability Manager (GVM). The tools
+#  essentially aid accessing the communication protocols GMP (Greenbone
+#  Management Protocol) and OSP (Open Scanner Protocol).
+#  .
+#  This module is comprised of interactive and non-interactive clients.
+#  The programming language Python is supported directly for interactive
+#  scripting.  But it is also possible to issue remote GMP/OSP commands
+#  without programming in Python.
