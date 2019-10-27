@@ -1,7 +1,6 @@
 ![Greenbone Logo](https://www.greenbone.net/wp-content/uploads/gb_logo_resilience_horizontal.png)
 
-# Greenbone Vulnerability Management Tools
-
+# Greenbone Vulnerability Management Tools <!-- omit in toc -->
 [![GitHub releases](https://img.shields.io/github/release-pre/greenbone/gvm-tools.svg)](https://github.com/greenbone/gvm-tools/releases)
 [![PyPI release](https://img.shields.io/pypi/v/gvm-tools.svg)](https://pypi.org/project/gvm-tools/)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/greenbone/gvm-tools/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/greenbone/gvm-tools/?branch=master)
@@ -20,24 +19,36 @@ The programming language Python is supported directly for interactive scripting.
 But it is also possible to issue remote GMP/OSP commands without programming in
 Python.
 
-## Table of Contents
 
-* [Installation](#installation)
-  * [Requirements](#requirements)
-  * [Install using pip](#install-using-pip)
-* [Usage](#usage)
-  * [gvm-cli](#gvm-cli)
-     * [Example program use](#example-program-use)
-  * [gvm-pyshell](#gvm-pyshell)
-     * [Example program use](#example-program-use-1)
-     * [Example script](#example-script)
-     * [More example scripts](#more-example-scripts)
-* [Support](#support)
-* [Maintainer](#maintainer)
-* [Contributing](#contributing)
-* [License](#license)
+## Table of Contents <!-- omit in toc -->
+- [Documentation](#documentation)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Install using pip](#install-using-pip)
+- [Usage](#usage)
+  - [gvm-cli](#gvm-cli)
+    - [Example program use](#example-program-use)
+  - [gvm-script](#gvm-script)
+    - [Example script](#example-script)
+    - [More example scripts](#more-example-scripts)
+  - [gvm-pyshell](#gvm-pyshell)
+    - [Example program use](#example-program-use-1)
+- [Support](#support)
+- [Maintainer](#maintainer)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Documentation
+
+The documentation for gvm-tools can be found at
+[https://gvm-tools.readthedocs.io/](https://gvm-tools.readthedocs.io/). Please
+always take a look at the documentation for further details. This README just
+gives you a short overview.
 
 ## Installation
+
+See the [documentation](https://gvm-tools.readthedocs.io/en/latest/install.html)
+for all supported installation options.
 
 ### Requirements
 
@@ -48,12 +59,7 @@ Python 3.5 and later is supported.
 You can install the latest stable release of gvm-tools from the Python Package
 Index using [pip](https://pip.pypa.io/):
 
-    pip install gvm-tools
-
-alternatively download or clone this repository and install the latest
-development version:
-
-    pip install .
+    pip install --user gvm-tools
 
 ## Usage
 
@@ -95,7 +101,7 @@ gvm-cli socket --xml "<commands><authenticate><credentials><username>myuser</use
 Reads a file with GMP commands and return the result.
 
 ```
-gvm-cli socket --gmp-username foo --gmp-password bar < myfile.gmp
+gvm-cli --gmp-username foo --gmp-password socket bar < myfile.xml
 ```
 
 Note that `gvm-cli` will by default raise an exception when a command is
@@ -104,36 +110,15 @@ unparsed XML response can be requested using the `--raw` parameter:
 
 ```
 gvm-cli socket --raw --xml "<authenticate/>"
+
 ```
 
-### gvm-pyshell
+### gvm-script
 
 This tool has a lot more features than the simple gvm-cli client. You
-have the possibility to create your own custom scripts with commands
+have the possibility to create your own custom gmp or osp scripts with commands
 from the [python-gvm library](https://github.com/greenbone/python-gvm) and from
-python3 itself. The scripts can be pre-loaded in the program through an
-additional argument.
-
-#### Example program use
-
-Open script.gmp over TLS connection.
-
-```
-gvm-pyshell tls --hostname=127.0.0.1 script.gmp
-```
-
-Connect with given credentials and as unix socket. Opens an interactive
-shell.
-
-```
-gvm-pyshell socket --gmp-username=user --gmp-password=pass -i
-```
-
-Connect through SSH connection. Opens an interactive shell.
-
-```
-gvm-pyshell ssh --hostname=127.0.0.1 -i
-```
+Python 3 itself.
 
 #### Example script
 
@@ -156,9 +141,30 @@ pretty_print(task_names)
 #### More example scripts
 
 There is a growing collection of gmp-scripts in the
-["scripts/"](https://github.com/greenbone/python-gvm/master/scripts) folder.
+["scripts/"](scripts/) folder.
 Some of them might be exactly what you need and all of them help writing
 your own gmp scripts.
+
+### gvm-pyshell
+
+This tool is for running gmp or osp scripts interactively. It provides the same
+API as [gvm-script](#gvm-script) using the
+[python-gvm library](https://github.com/greenbone/python-gvm).
+
+#### Example program use
+
+Connect with given credentials via a unix domain socket and open an interactive
+shell.
+
+```
+gvm-pyshell socket --gmp-username=user --gmp-password=pass -i
+```
+
+Connect through SSH connection and open the interactive shell.
+
+```
+gvm-pyshell ssh --hostname=127.0.0.1 -i
+```
 
 ## Support
 

@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
-# Description:
-# Script for gvm-pyshell
+# Copyright (C) 2018-2019 Greenbone Networks GmbH
 #
-# Authors:
-# Joshua Schwartz <joshua.schwartz@greenbone.net>
-#
-# Copyright:
-# Copyright (C) 2018 Greenbone Networks GmbH
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,8 +32,8 @@ def check_args(args):
         1. <xml_doc>  -- .xml file containing targets
 
         Example:
-            $ gvm-pyshell ssh --hostname=hostname --gmp-username=name \
-    --gmp-password=pass scripts/send-targets.gmp example_file.xml
+            $ gvm-script --gmp-username name --gmp-password pass \
+    ssh --hostname <gsm> scripts/send-targets.gmp example_file.xml
         """
         print(message)
         quit()
@@ -74,12 +69,16 @@ def create_xml_tree(xml_doc):
 
 
 def parse_send_xml_tree(gmp, xml_tree):
-    credential_options = ['ssh_credential', 'smb_credential',
-                          'esxi_credential', 'snmp_credential']
+    credential_options = [
+        'ssh_credential',
+        'smb_credential',
+        'esxi_credential',
+        'snmp_credential',
+    ]
     counter = 1
 
     for target in xml_tree.xpath('target'):
-        keywords = {'make_unique': True}
+        keywords = {}  # {'make_unique': True}
 
         keywords['name'] = target.find('name').text
 
@@ -101,7 +100,8 @@ def parse_send_xml_tree(gmp, xml_tree):
                 response = yes_or_no(
                     "\nThe credential '{}' for 'target {}' could not be "
                     "located...\nWould you like to continue?".format(
-                        credential, counter)
+                        credential, counter
+                    )
                 )
 
                 if response is False:
@@ -118,16 +118,17 @@ def parse_send_xml_tree(gmp, xml_tree):
 
             keywords[credential] = temp_dict
 
-        alive_tests = target.find('alive_tests').text
-        if alive_tests is not None:
-            keywords['alive_tests'] = alive_tests
+        alive_test = target.find('alive_test')
+
+        if alive_test is not None:
+            keywords['alive_test'] = alive_test
 
         reverse_lookup_only = target.find('reverse_lookup_only').text
-        if reverse_lookup_only is '1':
+        if reverse_lookup_only == '1':
             keywords['reverse_lookup_only'] = 1
 
         reverse_lookup_unify = target.find('reverse_lookup_unify').text
-        if reverse_lookup_unify is '1':
+        if reverse_lookup_unify == '1':
             keywords['reverse_lookup_unify'] = 1
 
         port_range = target.find('port_range').text
@@ -136,15 +137,17 @@ def parse_send_xml_tree(gmp, xml_tree):
 
         if target.xpath('port_list/@id') is not None:
             port_list = {}
-            port_list['id'] = target.xpath('port_list/@id')[0]
-            keywords['port_list'] = port_list
+            port_list = target.xpath('port_list/@id')[0]
+            keywords['port_list_id'] = port_list
+
+        print(keywords)
 
         gmp.create_target(**keywords)
 
         counter += 1
 
 
-def main():
+def main(gmp, args):
     # pylint: disable=undefined-variable
 
     check_args(args)
@@ -160,4 +163,4 @@ def main():
 
 
 if __name__ == '__gmp__':
-    main()
+    main(gmp, args)

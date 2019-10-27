@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
-# Description:
-# Script for gvm-pyshell
+# Copyright (C) 2018-2019 Greenbone Networks GmbH
 #
-# Authors:
-# Joshua Schwartz <joshua.schwartz@greenbone.net>
-#
-# Copyright:
-# Copyright (C) 2018 Greenbone Networks GmbH
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,8 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-
 from lxml import etree as e
+
 
 def check_args(args):
     len_args = len(args.script) - 1
@@ -33,11 +28,11 @@ def check_args(args):
     a desired GSM
         One parameter after the script name is required.
 
-        1. <xml_doc>     .xml file containing tasks
+        1. <xml_doc>  -- .xml file containing tasks
 
         Example:
-            $ gvm-pyshell ssh --hostname=hostname --gmp-username=name \
-    --gmp-password=pass scripts/send-tasks.gmp example_file.xml
+            $ gvm-script --gmp-username name --gmp-password pass \
+    ssh --hostname <gsm> scripts/send-tasks.gmp example_file.xml
         """
 
         print(message)
@@ -49,15 +44,16 @@ def error_and_exit(msg):
     sys.exit(1)
 
 
-def yes_or_no(question):
-    reply = str(input(question + ' (y/n): ')).lower().strip()
-
-    if reply[0] == ('y'):
-        return True
-    elif reply[0] == ('n'):
-        return False
+def inquire_yes_no(inquiry):
+    reply = str(input(inquiry + ' [Y/n]: ')).lower().strip()
+    if reply == 'y':
+        answer = True
+    elif reply == 'n':
+        answer = False
     else:
-        return yes_or_no("Please enter 'y' or 'n'")
+        answer = inquire_yes_no("Please enter valid option dummy!")
+
+    return answer
 
 
 def numerical_option(statement, list_range):
@@ -66,8 +62,10 @@ def numerical_option(statement, list_range):
     if choice in range(1, list_range + 1):
         return choice
     else:
-        return numerical_option("Please enter valid number from {} to {}..."
-                                .format(1, list_range), list_range)
+        return numerical_option(
+            "Please enter valid number from {} to {}...".format(1, list_range),
+            list_range,
+        )
 
 
 def create_xml_tree(xml_doc):
@@ -85,25 +83,29 @@ def create_xml_tree(xml_doc):
 
 
 def interactive_options(task, keywords):
-    options_list = ['config', 'scanner', 'target']
-    for option in options_list:
-        object_id = task.xpath('{}/@id'.format(option))[0]
+    options_dict = {}
+    options_dict['config'] = gmp.get_configs()
+    options_dict['scanner'] = gmp.get_scanners()
+    options_dict['target'] = gmp.get_targets()
 
-        exec('object_xml = gmp.get_{}s()'.format(option), globals())
-
+    for option in options_dict:
         object_dict, object_list = {}, []
+        object_id = task.xpath('{}/@id'.format(option))[0]
+        object_xml = options_dict[option]
 
         for i in object_xml.xpath('{}'.format(option)):
             object_dict[i.find('name').text] = i.xpath('@id')[0]
             object_list.append(i.find('name').text)
+
         if object_id in object_dict.values():
             keywords['{}_id'.format(option)] = object_id
         elif object_id not in object_dict.values() and len(object_dict) != 0:
-            response = yes_or_no(
+            response = inquire_yes_no(
                 "\nRequired Field: failed to detect {}_id: {}... "
                 "\nWould you like to select from available options, or exit "
                 "the script?".format(
-                    option, task.xpath('{}/@id'.format(option))[0])
+                    option, task.xpath('{}/@id'.format(option))[0]
+                )
             )
 
             if response is True:
@@ -114,10 +116,11 @@ def interactive_options(task, keywords):
                     counter += 1
                 answer = numerical_option(
                     "\nPlease enter the number of your choice.",
-                    len(object_list)
+                    len(object_list),
                 )
-                keywords['{}_id'.format(
-                    option)] = object_dict[object_list[answer - 1]]
+                keywords['{}_id'.format(option)] = object_dict[
+                    object_list[answer - 1]
+                ]
             else:
                 print("\nTerminating...")
                 quit()
@@ -125,7 +128,8 @@ def interactive_options(task, keywords):
             error_and_exit(
                 "Failed to detect {}_id"
                 "\nThis field is required therefore the script is unable to "
-                "continue.\n".format(option))
+                "continue.\n".format(option)
+            )
 
 
 def parse_send_xml_tree(gmp, xml_tree):
@@ -141,9 +145,10 @@ def parse_send_xml_tree(gmp, xml_tree):
 
         mod_keywords = {'task_id': new_task.xpath('//@id')[0]}
 
-        if task.find('schedule_periods').text != 0:
+        if task.find('schedule_periods') is not None:
             mod_keywords['schedule_periods'] = int(
-                task.find('schedule_periods').text)
+                task.find('schedule_periods').text
+            )
 
         if task.find('observers').text:
             mod_keywords['observers'] = task.find('observers').text
@@ -165,8 +170,9 @@ def parse_send_xml_tree(gmp, xml_tree):
             mod_keywords['preferences'] = preferences
 
         if task.xpath('file/@name'):
-            file = dict(name=task.xpath('file/@name'),
-                        action=task.xpath('file/@action'))
+            file = dict(
+                name=task.xpath('file/@name'), action=task.xpath('file/@action')
+            )
 
             mod_keywords['file'] = file
 
@@ -174,14 +180,12 @@ def parse_send_xml_tree(gmp, xml_tree):
             gmp.modify_task(**mod_keywords)
 
 
-def main():
+def main(gmp, args):
     # pylint: disable=undefined-variable
-
     check_args(args)
+    xml_doc = args.script[1]
 
-    xml_doc = args.script[2]
-
-    print('\nSending tasks...')
+    print('\nSending task(s)...')
 
     xml_tree = create_xml_tree(xml_doc)
     parse_send_xml_tree(gmp, xml_tree)
@@ -190,4 +194,4 @@ def main():
 
 
 if __name__ == '__gmp__':
-    main()
+    main(gmp, args)

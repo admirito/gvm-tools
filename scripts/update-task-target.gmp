@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
-# Description:
-# Script for gvm-pyshell
+# Copyright (C) 2018-2019 Greenbone Networks GmbH
 #
-# Authors:
-# Joshua Schwartz <joshua.schwartz@greenbone.net>
-# Junbo Huang <junbo.huang@greenbone.net>
-#
-# Copyright:
-# Copyright (C) 2018 Greenbone Networks GmbH
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,22 +22,23 @@ import time
 
 def check_args(args):
     len_args = len(args.script) - 1
-    if len_args is not 2:
+    if len_args != 2:
         message = """
         This script will update target hosts information for a desired task.
-        Two parameters after the script name is required.
+        Two parameters after the script name are required.
 
-        1. <hosts_file> --.csv file containing desired target hosts
-        2. <task_uuid>  --uuid of task to be modified
+        1. <hosts_file>  -- .csv file containing desired target hosts seperated by ','
+        2. <task_uuid>   -- uuid of task to be modified
 
         Example for starting up the routine:
-            $ gvm-pyshell ssh --hostname=hostname --gmp-username=name \
-    --gmp-password=pass scripts/update-task-target-hosts.gmp hosts_file.csv \
+            $ gvm-script --gmp-username name --gmp-password pass \
+    ssh --hostname <gsm> scripts/update-task-target-hosts.gmp hosts_file.csv \
     "303fa0a6-aa9b-43c4-bac0-66ae0b2d1698"
 
         """
         print(message)
         quit()
+
 
 def error_and_exit(msg):
     sys.stderr.write("Error: {}\n".format(msg))
@@ -51,7 +46,7 @@ def error_and_exit(msg):
 
 
 def load_host_file(filename):
-    host_list = []
+    host_list = list()
 
     try:
         f = open(filename)
@@ -61,68 +56,63 @@ def load_host_file(filename):
             if len(host) == 0:
                 continue
             host_list.append(host)
+
     except IOError as e:
         error_and_exit("Failed to read host_file: {} (exit)".format(str(e)))
 
     if len(host_list) == 0:
         error_and_exit("Host file is empty (exit)")
 
-    return host_list
+    hosts_string = ', '.join(map(str, host_list))
+
+    return hosts_string
 
 
-def copy_send_target(gmp, hosts, old_target_id):
-    old_target = gmp.get_target(target_id=old_target_id)[0]
-    name = old_target.find('name').text
+def copy_send_target(gmp, hosts_file, old_target_id):
+    hosts_string = load_host_file(hosts_file)
+    keywords = {'hosts': hosts_string}
 
-    comment = 'This target was automatically modified: {}'.format(
-        time.strftime("%Y/%m/%d-%H:%M:%S"))
-
-    reverse_lookup_only = old_target.find('reverse_lookup_only').text
-    if reverse_lookup_only is '0':
-        reverse_lookup_only = ''
-
-    reverse_lookup_unify = old_target.find('reverse_lookup_unify').text
-    if reverse_lookup_unify is '0':
-        reverse_lookup_unify = ''
-
-    port_list = {}
-    port_list['id'] = old_target.xpath('port_list/@id')[0]
-
-    new_target = gmp.create_target(
-        name=name,
-        make_unique=True,
-        hosts=hosts,
-        comment=comment,
-        reverse_lookup_only=reverse_lookup_only,
-        reverse_lookup_unify=reverse_lookup_unify,
-        port_list=port_list
+    keywords['comment'] = 'This target was automatically modified: {}'.format(
+        time.strftime("%Y/%m/%d-%H:%M:%S")
     )
 
+    old_target = gmp.get_target(target_id=old_target_id)[0]
+
+    objects = ('reverse_lookup_only', 'reverse_lookup_unify', 'name')
+    for obj in objects:
+        var = old_target.xpath('{}/text()'.format(obj))[0]
+        if var is '0':
+            var = ''
+        keywords['{}'.format(obj)] = var
+
+    port_list = {}
+    port_list = old_target.xpath('port_list/@id')[0]
+    keywords['port_list_id'] = port_list
+
+    new_target_id = gmp.create_target(**keywords).xpath('@id')[0]
+
     print('\n  New target created!\n')
-    print('Target id: {}'.format(new_target.xpath('@id')[0]))
-    print('Target name: {}\n'.format(name))
-
-    return new_target
-
-
-def create_target_hosts(gmp, host_list, task_id, old_target_id):
-    map(str.strip, host_list)
-    new_target = copy_send_target(gmp, host_list, old_target_id)
-
-    new_target_id = new_target.xpath('@id')[0]
-    modify_task_target(gmp, new_target_id, task_id)
+    print('Target_id:   {}'.format(new_target_id))
+    print('Target_name: {}\n'.format(keywords['name']))
 
     return new_target_id
 
 
-def modify_task_target(gmp, new_target_id, task_id):
-    gmp.modify_task(
-        task_id=task_id,
-        target_id=new_target_id
-    )
+def create_target_hosts(gmp, host_file, task_id, old_target_id):
+    new_target_id = copy_send_target(gmp, host_file, old_target_id)
+
+    gmp.modify_task(task_id=task_id, target_id=new_target_id)
+
+    print('  Task successfully modified!\n')
 
 
-def main():
+def check_to_delete(gmp, target_id):
+    target = gmp.get_target(target_id=target_id)[0]
+    if '0' in target.xpath("in_use/text()"):
+        gmp.delete_target(target_id=target_id)
+
+
+def main(gmp, args):
     # pylint: disable=undefined-variable
 
     check_args(args)
@@ -130,14 +120,12 @@ def main():
     hosts_file = args.script[1]
     task_id = args.script[2]
 
-    hosts_list = load_host_file(hosts_file)
-    task = gmp.get_tasks(task_id=task_id)[1]
+    task = gmp.get_task(task_id=task_id)[1]
     old_target_id = task.xpath('target/@id')[0]
 
-    create_target_hosts(gmp, hosts_list, task_id, old_target_id)
-
-    gmp.delete_target(target_id=old_target_id)
+    create_target_hosts(gmp, hosts_file, task_id, old_target_id)
+    check_to_delete(gmp, old_target_id)
 
 
 if __name__ == '__gmp__':
-    main()
+    main(gmp, args)
