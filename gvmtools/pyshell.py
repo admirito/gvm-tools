@@ -93,7 +93,7 @@ def main():
         'scriptname',
         nargs='?',
         metavar="SCRIPT",
-        help='Path to script to be preloaded (example: myscript.gmp)',
+        help='Path to script to be preloaded (example: myscript.gmp.py)',
     )
     parser.add_argument(
         'scriptargs',
@@ -103,13 +103,6 @@ def main():
     )
 
     args = parser.parse_args()
-
-    if 'socket' in args.connection_type and args.sockpath:
-        print(
-            'The --sockpath parameter has been deprecated. Please use '
-            '--socketpath instead',
-            file=sys.stderr,
-        )
 
     connection = create_connection(**vars(args))
 

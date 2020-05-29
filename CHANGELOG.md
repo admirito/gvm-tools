@@ -13,6 +13,40 @@ or get the entire source code repository and view log history:
 $ git clone https://github.com/greenbone/gvm-tools.git
 $ cd gvm-tools && git log
 ```
+## [2.1.0] - 2020-04-03
+
+### Added
+- Allow to specify hostname for SSH and TLS connections in the config file [#239](https://github.com/greenbone/gvm-tools/pull/239)
+
+### Changed
+
+- The script `random-report-gen.gmp` is able to add `host`, `host details`, `os`
+  and `application` data now, so the created reports are more realistic
+  [PR 218](https://github.com/greenbone/gvm-tools/pull/218),
+  [PR 220](https://github.com/greenbone/gvm-tools/pull/220)
+  [PR 225](https://github.com/greenbone/gvm-tools/pull/225)
+- The script `random-report-gen.gmp` now uses argparser, to improve its usage [PR 223](https://github.com/greenbone/gvm-tools/pull/223)
+- Use .py ending for all gmp scripts to support auto highlighting [PR 244](https://github.com/greenbone/gvm-tools/pull/244)
+- Updated glossary in the documentation to reflect changes in GVM 11 [PR 245](https://github.com/greenbone/gvm-tools/pull/245)
+- Replaced `pipenv` with `poetry` for dependency management. `poetry install`
+  works a bit different then `pipenv install`. It installs dev packages by
+  default and also gvmtools in editable mode. This means after running
+  `poetry install` all gvm-tools scripts are available in the created virtual
+  environment. [PR 246](https://github.com/greenbone/gvm-tools/pull/246)
+- Fixed version handling after switching to poetry [#249](https://github.com/greenbone/gvm-tools/pull/249)
+
+### Fixed
+
+- Exit with an error, if the `check_gmp.gmp` script is used with an temporary path, that has not the correct permissions.
+- Fixed `update-task-target.gmp` to create unique target names to support Gmpv8
+- Fixed an error, where the `--sockpath` argument didn't worked as expected [PR 216](https://github.com/greenbone/gvm-tools/pull/216)
+- Catch exception from gvm lib [PR 222](https://github.com/greenbone/gvm-tools/pull/222) [PR 224](https://github.com/greenbone/gvm-tools/pull/224)
+- Fixed `send-targets.gmp` throwing an exception due to an improper check [PR 248](https://github.com/greenbone/gvm-tools/pull/248)
+- Fixed `send-targets.gmp` : `hosts` and `exclude_hosts` expecting lists [PR 248](https://github.com/greenbone/gvm-tools/pull/248)
+
+### Removed
+
+[2.1.0]: https://github.com/greenbone/gvm-tools/compare/v2.0.0...v2.1.0
 
 ## [2.0.0] - 2019-09-19
 

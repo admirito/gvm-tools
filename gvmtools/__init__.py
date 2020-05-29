@@ -19,15 +19,8 @@
 Main module of gvm-tools.
 """
 
-from pkg_resources import safe_version
 
-VERSION = (2, 0, 0)
-"""
-Current Version of gvm-tools as a tuple
-"""
-
-
-def get_version():
+def get_version() -> str:
     """Returns the version of gvm-tools as a string in `PEP440`_ compliant
     format.
 
@@ -37,5 +30,7 @@ def get_version():
     .. _PEP440:
        https://www.python.org/dev/peps/pep-0440
     """
-    str_version = '.'.join([str(v) for v in VERSION])
-    return safe_version(str_version)
+    # pylint: disable=import-outside-toplevel
+    from .__version__ import __version__
+
+    return __version__

@@ -27,12 +27,12 @@ def check_args(args):
         This script will update target hosts information for a desired task.
         Two parameters after the script name are required.
 
-        1. <hosts_file>  -- .csv file containing desired target hosts seperated by ','
+        1. <hosts_file>  -- .csv file containing desired target hosts separated by ','
         2. <task_uuid>   -- uuid of task to be modified
 
         Example for starting up the routine:
             $ gvm-script --gmp-username name --gmp-password pass \
-    ssh --hostname <gsm> scripts/update-task-target-hosts.gmp hosts_file.csv \
+    ssh --hostname <gsm> scripts/update-task-target.gmp.py hosts_file.csv \
     "303fa0a6-aa9b-43c4-bac0-66ae0b2d1698"
 
         """
@@ -88,6 +88,8 @@ def copy_send_target(gmp, hosts_file, old_target_id):
     port_list = {}
     port_list = old_target.xpath('port_list/@id')[0]
     keywords['port_list_id'] = port_list
+
+    keywords['name'] += "_copy"  # the name must differ from existing names
 
     new_target_id = gmp.create_target(**keywords).xpath('@id')[0]
 

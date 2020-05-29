@@ -29,6 +29,7 @@ import tempfile
 from argparse import ArgumentParser, RawTextHelpFormatter
 from datetime import datetime, timedelta, tzinfo
 from decimal import Decimal
+from pathlib import Path
 
 from lxml import etree
 
@@ -79,7 +80,7 @@ class InstanceManager:
     and wait for continuation.
     """
 
-    def __init__(self, path):
+    def __init__(self, path, parser):
         """Initialise the sqlite database.
 
         Create it if it does not exist else connect to it.
@@ -89,41 +90,51 @@ class InstanceManager:
         """
         self.cursor = None
         self.con_db = None
-        self.path = path
+        self.db = Path(path)
         self.pid = os.getpid()
 
         # Try to read file with information about cached reports
         # First check whether the file exist or not
-        exist = os.path.isfile(path)
-        logger.debug("DB file exist?: %s ", exist)
+        try:
+            exist = self.db.is_file()
+            logger.debug("DB file exist?: %s ", exist)
 
-        if not exist:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+            if not exist:
+                if not self.db.parent.is_dir():
+                    self.db.parent.mkdir(parents=True, exist_ok=True)
+                else:
+                    self.db.touch()
+                # Connect to db
+                self.connect_db()
 
-            # Connect to db
-            self.connect_db()
+                # Create the tables
+                self.cursor.execute(
+                    """CREATE TABLE Report(
+                    host text,
+                    scan_end text,
+                    params_used text,
+                    report text
+                )"""
+                )
 
-            # Create the tables
-            self.cursor.execute(
-                """CREATE TABLE Report(
-                host text,
-                scan_end text,
-                params_used text,
-                report text
-            )"""
+                self.cursor.execute(
+                    """CREATE TABLE Instance(
+                    created_at text,
+                    pid integer,
+                    pending integer default 0
+                )"""
+                )
+
+                logger.debug("Tables created")
+            else:
+                self.connect_db()
+
+        except PermissionError:
+            parser.error(
+                "The selected temporary database file {} or the parent dir has not the correct permissions.".format(
+                    self.db
+                )
             )
-
-            self.cursor.execute(
-                """CREATE TABLE Instance(
-                created_at text,
-                pid integer,
-                pending integer default 0
-            )"""
-            )
-
-            logger.debug("Tables created")
-        else:
-            self.connect_db()
 
     @staticmethod
     def _to_sql_bool(pending):
@@ -137,8 +148,8 @@ class InstanceManager:
         Simply connect to the database at location <path>
         """
         try:
-            logger.debug("connect db: %s", self.path)
-            self.con_db = sqlite3.connect(self.path)
+            logger.debug("connect db: %s", self.db)
+            self.con_db = sqlite3.connect(self.db)
             self.cursor = self.con_db.cursor()
             logger.debug(sqlite3.sqlite_version)
         except Exception as e:  # pylint: disable=broad-except
@@ -265,9 +276,7 @@ class InstanceManager:
         self.cursor.execute("DELETE FROM Report WHERE host=?", (ip,))
         self.con_db.isolation_level = None
         self.cursor.execute("VACUUM")
-        self.con_db.isolation_level = (
-            ''
-        )  # see: https://github.com/CxAalto/gtfspy/commit/8d05c3c94a6d4ca3ed675d88af93def7d5053bfe
+        self.con_db.isolation_level = ''  # see: https://github.com/CxAalto/gtfspy/commit/8d05c3c94a6d4ca3ed675d88af93def7d5053bfe
         # Save the changes
         self.con_db.commit()
 
@@ -1199,8 +1208,8 @@ def main(gmp, args):
         formatter_class=RawTextHelpFormatter,
         add_help=False,
         epilog="""
-        usage: gvm-script [connection_type] check-gmp.gmp ...
-        or: gvm-script [connection_type] check-gmp.gmp -H
+        usage: gvm-script [connection_type] check-gmp.gmp.py ...
+        or: gvm-script [connection_type] check-gmp.gmp.py -H
         or: gvm-script connection_type --help""",
     )
 
@@ -1376,7 +1385,7 @@ def main(gmp, args):
     # Set the report manager
     if script_args.cache:
         tmp_path_db = script_args.cache
-    im = InstanceManager(tmp_path_db)
+    im = InstanceManager(tmp_path_db, parser)
 
     # Check if command holds clean command
     if script_args.clean:

@@ -24,6 +24,8 @@ from gvm.connections import DEFAULT_UNIX_SOCKET_PATH, DEFAULT_TIMEOUT
 
 from gvmtools.parser import CliParser
 
+from . import SuppressOutput
+
 __here__ = Path(__file__).parent.resolve()
 
 
@@ -133,32 +135,36 @@ class RootArgumentsParserTest(ParserTestCase):
         self.assertEqual(args.loglevel, 'ERROR')
 
     def test_loglevel_after_subparser(self):
-        with self.assertRaises(SystemExit):
-            self.parser.parse_args(['socket', '--log', 'ERROR'])
+        with SuppressOutput(suppress_stderr=True):
+            with self.assertRaises(SystemExit):
+                self.parser.parse_args(['socket', '--log', 'ERROR'])
 
     def test_timeout(self):
         args = self.parser.parse_args(['--timeout', '1000', 'socket'])
         self.assertEqual(args.timeout, 1000)
 
     def test_timeout_after_subparser(self):
-        with self.assertRaises(SystemExit):
-            self.parser.parse_args(['socket', '--timeout', '1000'])
+        with SuppressOutput(suppress_stderr=True):
+            with self.assertRaises(SystemExit):
+                self.parser.parse_args(['socket', '--timeout', '1000'])
 
     def test_gmp_username(self):
         args = self.parser.parse_args(['--gmp-username', 'foo', 'socket'])
         self.assertEqual(args.gmp_username, 'foo')
 
     def test_gmp_username_after_subparser(self):
-        with self.assertRaises(SystemExit):
-            self.parser.parse_args(['socket', '--gmp-username', 'foo'])
+        with SuppressOutput(suppress_stderr=True):
+            with self.assertRaises(SystemExit):
+                self.parser.parse_args(['socket', '--gmp-username', 'foo'])
 
     def test_gmp_password(self):
         args = self.parser.parse_args(['--gmp-password', 'foo', 'socket'])
         self.assertEqual(args.gmp_password, 'foo')
 
     def test_gmp_password_after_subparser(self):
-        with self.assertRaises(SystemExit):
-            self.parser.parse_args(['socket', '--gmp-password', 'foo'])
+        with SuppressOutput(suppress_stderr=True):
+            with self.assertRaises(SystemExit):
+                self.parser.parse_args(['socket', '--gmp-password', 'foo'])
 
     def test_with_unknown_args(self):
         args, script_args = self.parser.parse_known_args(
@@ -171,8 +177,7 @@ class RootArgumentsParserTest(ParserTestCase):
 class SocketParserTestCase(ParserTestCase):
     def test_defaults(self):
         args = self.parser.parse_args(['socket'])
-        self.assertIsNone(args.sockpath)
-        self.assertEqual(args.socketpath, '/usr/local/var/run/gvmd.sock')
+        self.assertEqual(args.socketpath, DEFAULT_UNIX_SOCKET_PATH)
 
     def test_connection_type(self):
         args = self.parser.parse_args(['socket'])
@@ -180,7 +185,7 @@ class SocketParserTestCase(ParserTestCase):
 
     def test_sockpath(self):
         args = self.parser.parse_args(['socket', '--sockpath', 'foo.sock'])
-        self.assertEqual(args.sockpath, 'foo.sock')
+        self.assertEqual(args.socketpath, 'foo.sock')
 
     def test_socketpath(self):
         args = self.parser.parse_args(['socket', '--socketpath', 'foo.sock'])
@@ -333,9 +338,11 @@ class HelpFormattingParserTestCase(ParserTestCase):
         self.assert_snapshot('socket_help', help_output)
 
     def test_ssh_help(self):
+        self.parser._set_defaults(None)
         help_output = self.parser._parser_ssh.format_help()
         self.assert_snapshot('ssh_help', help_output)
 
     def test_tls_help(self):
+        self.parser._set_defaults(None)
         help_output = self.parser._parser_tls.format_help()
         self.assert_snapshot('tls_help', help_output)

@@ -197,7 +197,7 @@ class CliParser:
         )
 
         parser_ssh.add_argument(
-            '--hostname', required=True, help='Hostname or IP address'
+            '--hostname', help='Hostname or IP address (default: %(default)s)',
         )
         parser_ssh.add_argument(
             '--port',
@@ -216,7 +216,7 @@ class CliParser:
             'tls', help='Use TLS secured connection to connect to service'
         )
         parser_tls.add_argument(
-            '--hostname', required=True, help='Hostname or IP address'
+            '--hostname', help='Hostname or IP address (default: %(default)s)',
         )
         parser_tls.add_argument(
             '--port',
@@ -259,6 +259,7 @@ class CliParser:
             '--sockpath',
             nargs='?',
             default=None,
+            dest='socketpath',
             help='Deprecated, use --socketpath instead',
         )
         socketpath_group.add_argument(
@@ -277,19 +278,21 @@ class CliParser:
         self._parser.set_defaults(
             gmp_username=self._config.get('gmp', 'username'),
             gmp_password=self._config.get('gmp', 'password'),
-            **self._config.defaults()
+            **self._config.defaults(),
         )
 
         self._parser_ssh.set_defaults(
             port=int(self._config.get('ssh', 'port')),
             ssh_username=self._config.get('ssh', 'username'),
             ssh_password=self._config.get('ssh', 'password'),
+            hostname=self._config.get('ssh', 'hostname'),
         )
         self._parser_tls.set_defaults(
             port=int(self._config.get('tls', 'port')),
             certfile=self._config.get('tls', 'certfile'),
             keyfile=self._config.get('tls', 'keyfile'),
             cafile=self._config.get('tls', 'cafile'),
+            hostname=self._config.get('tls', 'hostname'),
         )
         self._parser_socket.set_defaults(
             socketpath=self._config.get('unixsocket', 'socketpath')
