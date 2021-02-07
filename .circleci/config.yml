@@ -1,17 +1,17 @@
 version: 2.1
 
 executors:
-  python-35:
-    docker:
-      - image: circleci/python:3.5
-    working_directory: ~/repo
-  python-36:
-    docker:
-      - image: circleci/python:3.6
-    working_directory: ~/repo
   python-37:
     docker:
       - image: circleci/python:3.7
+    working_directory: ~/repo
+  python-38:
+    docker:
+      - image: circleci/python:3.8
+    working_directory: ~/repo
+  python-39:
+    docker:
+      - image: circleci/python:3.9
     working_directory: ~/repo
 
 commands:
@@ -22,6 +22,16 @@ commands:
       - run:
           name: Install dependencies
           command: poetry install --no-dev
+  build-docs:
+    description: "Download and build the documentation"
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: poetry install
+      - run:
+          name: Build docs
+          command: cd docs && poetry run make html
   test:
     description: "Download and run tests"
     steps:
@@ -63,7 +73,7 @@ commands:
           command: poetry run pylint --score=n --disable=R gvmtools
       - run:
           name: Check version information
-          command: poetry run python -m gvmtools.version verify current
+          command: poetry run python -m pontos.version verify current
   lint-scripts:
     description: "Lint GVM scripts"
     steps:
@@ -80,17 +90,17 @@ commands:
       - run:
           name: Run pylint
           command: |
-            poetry run pylint --rcfile=scripts/.pylintrc --disable=R --ignore=requirements.txt scripts/*
+            poetry run pylint --rcfile=scripts/.pylintrc --disable=R --ignore=requirements.txt scripts/*.py
   deploy:
     description: "Upload package to PyPI"
     steps:
       - checkout
       - run:
           name: Install dependencies
-          command: poetry install --no-dev
+          command: poetry install
       - run:
           name: Verify tag version
-          command: poetry run python -m gvmtools.version verify ${CIRCLE_TAG}
+          command: poetry run python -m pontos.version verify ${CIRCLE_TAG}
       - run:
           name: Install twine
           command: poetry run pip install twine
@@ -111,29 +121,17 @@ commands:
 
 jobs:
   lint-python-files:
-    executor: python-36
+    executor: python-38
     steps:
       - lint
   lint-gvm-scripts:
-    executor: python-36
+    executor: python-38
     steps:
       - lint-scripts
-  build-35:
-    executor: python-35
+  build-documentation:
+    executor: python-38
     steps:
-      - build
-  test-35:
-    executor: python-35
-    steps:
-      - test
-  build-36:
-    executor: python-36
-    steps:
-      - build
-  test-36:
-    executor: python-36
-    steps:
-      - test
+      - build-docs
   build-37:
     executor: python-37
     steps:
@@ -146,18 +144,36 @@ jobs:
     executor: python-37
     steps:
       - deploy
+  build-38:
+    executor: python-38
+    steps:
+      - build
+  test-38:
+    executor: python-38
+    steps:
+      - test
+  build-39:
+    executor: python-39
+    steps:
+      - build
+  test-39:
+    executor: python-39
+    steps:
+      - test
 
 workflows:
   version: 2
   build_and_test:
     jobs:
       - lint-python-files
-      - build-35
-      - test-35
-      - build-36
-      - test-36
+      - lint-gvm-scripts
+      - build-documentation
       - build-37
       - test-37
+      - build-38
+      - test-38
+      - build-39
+      - test-39
   build_and_deploy:
     jobs:
       - build-37:

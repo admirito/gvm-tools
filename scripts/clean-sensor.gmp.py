@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2017-2019 Greenbone Networks GmbH
+# Copyright (C) 2017-2021 Greenbone Networks GmbH
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -69,7 +69,7 @@ def clean_sensor(gmp):
 
 
 def main(gmp, args):
-    # pylint: disable=undefined-variable
+    # pylint: disable=unused-argument
 
     message = """
     This script removes all resources from a sensor, except active tasks.

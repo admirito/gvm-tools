@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2018-2019 Greenbone Networks GmbH
+# Copyright (C) 2017-2021 Greenbone Networks GmbH
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -18,8 +18,6 @@
 
 # pylint: disable=too-many-lines
 
-import uuid
-import string
 import time
 import textwrap
 import json
@@ -30,10 +28,16 @@ from pathlib import Path
 
 from lxml import etree as e
 
+from gvmtools.helper import (
+    generate_uuid,
+    generate_id,
+    generate_random_ips,
+)
+
 __version__ = "0.1.0"
 
 HELP_TEXT = """
-    Random Report Generation Script {version} (C) 2017-2019 Greenbone Networks GmbH
+    Random Report Generation Script {version} (C) 2017-2021 Greenbone Networks GmbH
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -54,31 +58,9 @@ HELP_TEXT = """
 )
 
 
-def generate_uuid():
-    return str(uuid.uuid4())
-
-
-def generate_ips(n_hosts):
-    exclude_127 = [i for i in range(1, 256)]
-    exclude_127.remove(127)
-    return [
-        '{}.{}.{}.{}'.format(
-            choice(exclude_127),
-            randrange(0, 256),
-            randrange(0, 256),
-            randrange(1, 255),
-        )
-        for i in range(n_hosts)
-    ]
-
-
 def generate_ports(n_ports):
     protocol = ['/tcp', '/udp']
     return [str(randrange(0, 65536)) + choice(protocol) for i in range(n_ports)]
-
-
-def id_generator(size=12, chars=string.ascii_uppercase + string.digits):
-    return ''.join(choice(chars) for _ in range(size))
 
 
 def generate_report_elem(task, **kwargs):
@@ -118,11 +100,11 @@ def generate_inner_report(rep_id, n_results, n_hosts, data, **kwargs):
     )
 
     # Create Hosts, Ports, Data
-    hosts = generate_ips(n_hosts)  # Host IPs
+    hosts = generate_random_ips(n_hosts)  # Host IPs
     ports = generate_ports(n_hosts)
     oid_dict = {host: [] for host in hosts}
     asset_dict = {host: generate_uuid() for host in hosts}
-    host_names = {host: id_generator() for host in hosts}
+    host_names = {host: generate_id() for host in hosts}
     max_sev = 0.0
 
     # Create <result> tags with random data
@@ -170,9 +152,9 @@ def generate_inner_report(rep_id, n_results, n_hosts, data, **kwargs):
 def generate_result_elem(vulns, host_ip, host_port, host_asset, host_name):
     result_elem = e.Element('result', {'id': generate_uuid()})
 
-    e.SubElement(result_elem, 'name').text = "a_result" + id_generator()
+    e.SubElement(result_elem, 'name').text = "a_result" + generate_id()
     own = e.SubElement(result_elem, 'owner')
-    e.SubElement(own, 'name').text = id_generator()
+    e.SubElement(own, 'name').text = generate_id()
 
     elem = e.Element('modification_time')
     e.SubElement(result_elem, 'modification_time').text = (
@@ -365,7 +347,7 @@ def generate_data(gmp, n_tasks, **kwargs):
 
 
 def main(gmp, args):
-    # pylint: disable=undefined-variable
+    # pylint: disable=undefined-variable, line-too-long
 
     parser = ArgumentParser(
         prog="random-report-gen",
@@ -389,7 +371,9 @@ def main(gmp, args):
     parser.add_argument(
         "--datafile",
         default=Path(args.script[0]).parent / "default_report_data.json",
-        help="A json file containing the following information: vulnerabilities, operating systems, applications and host details. Take the default json file as an example.",
+        help="A json file containing the following information: "
+        "vulnerabilities, operating systems, applications and host details. "
+        "Take the default json file as an example.",
     )
 
     parser.add_argument(
@@ -443,7 +427,8 @@ def main(gmp, args):
         "--with-gauss",
         dest="with_gauss",
         action="store_true",
-        help="if you would like for the number of reports/task and results/report to be randomized along a Gaussian distribution.",
+        help="if you would like for the number of reports/task and "
+        "results/report to be randomized along a Gaussian distribution.",
     )
 
     parser.add_argument(
@@ -452,7 +437,10 @@ def main(gmp, args):
 
     script_args = parser.parse_args(args.script_args)
 
-    seed() if not script_args.seed else seed(script_args.seed)
+    if not script_args.seed:
+        seed()
+    else:
+        seed(script_args.seed)
 
     with open(str(script_args.datafile)) as file:
         data = json.load(file)

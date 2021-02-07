@@ -16,13 +16,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import sys
 import unittest
 
+from unittest.mock import patch
 from pathlib import Path
 
-from gvm.connections import DEFAULT_UNIX_SOCKET_PATH, DEFAULT_TIMEOUT
+from argparse import Namespace
+from gvm.connections import (
+    DEFAULT_UNIX_SOCKET_PATH,
+    DEFAULT_TIMEOUT,
+    UnixSocketConnection,
+    TLSConnection,
+    SSHConnection,
+)
 
-from gvmtools.parser import CliParser
+from gvmtools.parser import CliParser, create_parser, create_connection
 
 from . import SuppressOutput
 
@@ -74,6 +84,49 @@ class ConfigParserTestCase(unittest.TestCase):
         self.assertEqual(args.keyfile, 'foo.key')
         self.assertEqual(args.cafile, 'foo.ca')
         self.assertEqual(args.port, 123)
+
+    @patch('gvmtools.parser.logger')
+    @patch('gvmtools.parser.Path')
+    def test_resolve_file_not_found_error(self, path_mock, logger_mock):
+        # Making sure that resolve raises an error
+        def resolve_raises_error():
+            raise FileNotFoundError()
+
+        configpath = unittest.mock.MagicMock()
+        configpath.expanduser().resolve = unittest.mock.MagicMock(
+            side_effect=resolve_raises_error
+        )
+        path_mock.return_value = configpath
+
+        logger_mock.debug = unittest.mock.MagicMock()
+
+        args = self.parser.parse_args(['socket'])
+
+        self.assertIsInstance(args, Namespace)
+        self.assertEqual(args.connection_type, 'socket')
+        self.assertEqual(args.config, '~/.config/gvm-tools.conf')
+        logger_mock.debug.assert_any_call(
+            'Ignoring non existing config file %s', '~/.config/gvm-tools.conf'
+        )
+
+    @patch('gvmtools.parser.Path')
+    @patch('gvmtools.parser.Config')
+    def test_config_load_raises_error(self, config_mock, path_mock):
+        def config_load_error():
+            raise Exception
+
+        config = unittest.mock.MagicMock()
+        config.load = unittest.mock.MagicMock(side_effect=config_load_error)
+        config_mock.return_value = config
+
+        # Making sure that the function thinks the config file exists
+        configpath_exists = unittest.mock.Mock()
+        configpath_exists.expanduser().resolve().exists = (
+            unittest.mock.MagicMock(return_value=True)
+        )
+        path_mock.return_value = configpath_exists
+
+        self.assertRaises(RuntimeError, self.parser.parse_args, ['socket'])
 
 
 class IgnoreConfigParserTestCase(unittest.TestCase):
@@ -172,6 +225,32 @@ class RootArgumentsParserTest(ParserTestCase):
         )
         self.assertEqual(args.gmp_password, 'foo')
         self.assertEqual(script_args, ['--bar', '--bar2'])
+
+    @patch('gvmtools.parser.logging')
+    def test_socket_has_no_timeout(self, _logging_mock):
+        # pylint: disable=protected-access
+        args_mock = unittest.mock.MagicMock()
+        args_mock.timeout = -1
+        self.parser._parser.parse_known_args = unittest.mock.MagicMock(
+            return_value=(args_mock, unittest.mock.MagicMock())
+        )
+
+        args, _ = self.parser.parse_known_args(
+            ['socket', '--timeout', '--', '-1']
+        )
+
+        self.assertIsNone(args.timeout)
+
+    @patch('gvmtools.parser.logging')
+    @patch('gvmtools.parser.argparse.ArgumentParser.print_usage')
+    @patch('gvmtools.parser.argparse.ArgumentParser._print_message')
+    def test_no_args_provided(
+        self, _logging_mock, _print_usage_mock, _print_message
+    ):
+        # pylint: disable=protected-access
+        self.parser._set_defaults = unittest.mock.MagicMock()
+
+        self.assertRaises(SystemExit, self.parser.parse_known_args, None)
 
 
 class SocketParserTestCase(ParserTestCase):
@@ -310,15 +389,39 @@ class CustomizeParserTestCase(ParserTestCase):
 class HelpFormattingParserTestCase(ParserTestCase):
     # pylint: disable=protected-access
     maxDiff = None
+    python_version = '.'.join([str(i) for i in sys.version_info[:2]])
 
-    def _snapshot_path(self, name):
+    def setUp(self):
+        super().setUp()
+
+        # ensure all tests are using the same terminal width
+        self.columns = os.environ.get('COLUMNS')
+        os.environ['COLUMNS'] = '80'
+
+    def tearDown(self):
+        super().tearDown()
+
+        if not self.columns:
+            del os.environ['COLUMNS']
+        else:
+            os.environ['COLUMNS'] = self.columns
+
+    def _snapshot_specific_path(self, name):
+        return __here__ / '{}.{}.snap'.format(name, self.python_version)
+
+    def _snapshot_generic_path(self, name):
         return __here__ / '{}.snap'.format(name)
 
-    def _load_snapshot(self, path):
-        return path.read_text()
+    def _snapshot_failed_path(self, name):
+        return __here__ / '{}.{}-failed.snap'.format(name, self.python_version)
 
-    def _write_snapshot(self, path, output):
-        path.write_text(output)
+    def _snapshot_path(self, name):
+        snapshot_specific_path = self._snapshot_specific_path(name)
+
+        if snapshot_specific_path.exists():
+            return snapshot_specific_path
+
+        return self._snapshot_generic_path(name)
 
     def assert_snapshot(self, name, output):
         path = self._snapshot_path(name)
@@ -327,7 +430,15 @@ class HelpFormattingParserTestCase(ParserTestCase):
             path.write_text(output)
 
         content = path.read_text()
-        self.assertEqual(content, output, 'Snapshot differs from output')
+
+        try:
+            self.assertEqual(content, output, 'Snapshot differs from output')
+        except AssertionError:
+            # write new output to snapshot file
+            # reraise error afterwards
+            path = self._snapshot_failed_path(name)
+            path.write_text(output)
+            raise
 
     def test_root_help(self):
         help_output = self.parser._parser.format_help()
@@ -346,3 +457,36 @@ class HelpFormattingParserTestCase(ParserTestCase):
         self.parser._set_defaults(None)
         help_output = self.parser._parser_tls.format_help()
         self.assert_snapshot('tls_help', help_output)
+
+
+class CreateParserFunctionTestCase(unittest.TestCase):
+    # pylint: disable=protected-access
+    def test_create_parser(self):
+        description = 'parser description'
+        logfilename = 'logfilename'
+
+        parser = create_parser(description, logfilename)
+
+        self.assertIsInstance(parser, CliParser)
+        self.assertEqual(parser._logfilename, logfilename)
+        self.assertEqual(parser._bootstrap_parser.description, description)
+
+
+class CreateConnectionTestCase(unittest.TestCase):
+    def test_create_unix_socket_connection(self):
+        self.perform_create_connection_test()
+
+    def test_create_tls_connection(self):
+        self.perform_create_connection_test('tls', TLSConnection)
+
+    def test_create_ssh_connection(self):
+        self.perform_create_connection_test('ssh', SSHConnection, 22)
+
+    def perform_create_connection_test(
+        self,
+        connection_type='socket',
+        connection_class=UnixSocketConnection,
+        port=None,
+    ):
+        connection = create_connection(connection_type, port=port)
+        self.assertIsInstance(connection, connection_class)

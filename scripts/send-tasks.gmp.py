@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2018-2019 Greenbone Networks GmbH
+# Copyright (C) 2018-2021 Greenbone Networks GmbH
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -17,43 +17,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from lxml import etree as e
+from argparse import ArgumentParser, RawTextHelpFormatter
 
+from gvmtools.helper import create_xml_tree, error_and_exit, yes_or_no
 
-def check_args(args):
-    len_args = len(args.script) - 1
-    if len_args is not 1:
-        message = """
+HELP_TEXT = """
         This script pulls tasks data from an xml document and feeds it to \
-    a desired GSM
-        One parameter after the script name is required.
-
-        1. <xml_doc>  -- .xml file containing tasks
-
-        Example:
-            $ gvm-script --gmp-username name --gmp-password pass \
-    ssh --hostname <gsm> scripts/send-tasks.gmp.py example_file.xml
-        """
-
-        print(message)
-        quit()
-
-
-def error_and_exit(msg):
-    print("\nError: {}\n".format(msg), file=sys.stderr)
-    sys.exit(1)
-
-
-def inquire_yes_no(inquiry):
-    reply = str(input(inquiry + ' [Y/n]: ')).lower().strip()
-    if reply == 'y':
-        answer = True
-    elif reply == 'n':
-        answer = False
-    else:
-        answer = inquire_yes_no("Please enter valid option dummy!")
-
-    return answer
+            a desired GSM
+        Usage examples: 
+            $ gvm-script --gmp-username name --gmp-password pass ssh --hostname
+            ... send-task.gmp.py +h
+            ... send-task.gmp.py ++x xml_file
+    """
 
 
 def numerical_option(statement, list_range):
@@ -68,21 +43,7 @@ def numerical_option(statement, list_range):
         )
 
 
-def create_xml_tree(xml_doc):
-    try:
-        xml_tree = e.parse(xml_doc)
-        xml_tree = e.tostring(xml_tree)
-        xml_tree = e.XML(xml_tree)
-    except IOError as err:
-        error_and_exit("Failed to read xml_file: {} (exit)".format(str(err)))
-
-    if len(xml_tree) == 0:
-        error_and_exit("XML file is empty (exit)")
-
-    return xml_tree
-
-
-def interactive_options(task, keywords):
+def interactive_options(gmp, task, keywords):
     options_dict = {}
     options_dict['config'] = gmp.get_configs()
     options_dict['scanner'] = gmp.get_scanners()
@@ -90,17 +51,17 @@ def interactive_options(task, keywords):
 
     for option in options_dict:
         object_dict, object_list = {}, []
-        object_id = task.xpath('{}/@id'.format(option))[0]
+        object_id = task.find(option).get('id')
         object_xml = options_dict[option]
 
-        for i in object_xml.xpath('{}'.format(option)):
+        for i in object_xml.findall(option):
             object_dict[i.find('name').text] = i.xpath('@id')[0]
             object_list.append(i.find('name').text)
 
         if object_id in object_dict.values():
             keywords['{}_id'.format(option)] = object_id
         elif object_id not in object_dict.values() and len(object_dict) != 0:
-            response = inquire_yes_no(
+            response = yes_or_no(
                 "\nRequired Field: failed to detect {}_id: {}... "
                 "\nWould you like to select from available options, or exit "
                 "the script?".format(
@@ -123,7 +84,7 @@ def interactive_options(task, keywords):
                 ]
             else:
                 print("\nTerminating...")
-                quit()
+                sys.exit()
         else:
             error_and_exit(
                 "Failed to detect {}_id"
@@ -133,28 +94,29 @@ def interactive_options(task, keywords):
 
 
 def parse_send_xml_tree(gmp, xml_tree):
-    for task in xml_tree.xpath('task'):
+    task_xml_elements = xml_tree.xpath('task')
+    print(task_xml_elements)
+    if not task_xml_elements:
+        error_and_exit("No tasks found.")
+    tasks = []
+    for task in task_xml_elements:
         keywords = {'name': task.find('name').text}
 
         if task.find('comment').text is not None:
             keywords['comment'] = task.find('comment').text
 
-        interactive_options(task, keywords)
-
-        new_task = gmp.create_task(**keywords)
-
-        mod_keywords = {'task_id': new_task.xpath('//@id')[0]}
+        interactive_options(gmp, task, keywords)
 
         if task.find('schedule_periods') is not None:
-            mod_keywords['schedule_periods'] = int(
+            keywords['schedule_periods'] = int(
                 task.find('schedule_periods').text
             )
 
         if task.find('observers').text:
-            mod_keywords['observers'] = task.find('observers').text
+            keywords['observers'] = task.find('observers').text
 
         if task.xpath('schedule/@id')[0]:
-            mod_keywords['schedule_id'] = task.xpath('schedule/@id')[0]
+            keywords['schedule_id'] = task.xpath('schedule/@id')[0]
 
         if task.xpath('preferences/preference'):
             preferences, scanner_name_list, value_list = {}, [], []
@@ -167,31 +129,52 @@ def parse_send_xml_tree(gmp, xml_tree):
                     value_list.append('')
             preferences['scanner_name'] = scanner_name_list
             preferences['value'] = value_list
-            mod_keywords['preferences'] = preferences
+            keywords['preferences'] = preferences
 
-        if task.xpath('file/@name'):
-            file = dict(
-                name=task.xpath('file/@name'), action=task.xpath('file/@action')
-            )
+        new_task = gmp.create_task(**keywords)
 
-            mod_keywords['file'] = file
-
-        if len(mod_keywords) > 1:
-            gmp.modify_task(**mod_keywords)
+        tasks.append(new_task.xpath('//@id')[0])
+    return tasks
 
 
 def main(gmp, args):
-    # pylint: disable=undefined-variable
-    check_args(args)
-    xml_doc = args.script[1]
+    # pylint: disable=undefined-variable, unused-argument
+
+    parser = ArgumentParser(
+        prefix_chars="+",
+        add_help=False,
+        formatter_class=RawTextHelpFormatter,
+        description=HELP_TEXT,
+    )
+
+    parser.add_argument(
+        "+h",
+        "++help",
+        action="help",
+        help="Show this help message and exit.",
+    )
+
+    parser.add_argument(
+        "+x",
+        "++xml-file",
+        dest='xml',
+        type=str,
+        required=True,
+        help='xml file containing tasks',
+    )
+
+    script_args, _ = parser.parse_known_args()
+
+    # check_args(args)
 
     print('\nSending task(s)...')
 
-    xml_tree = create_xml_tree(xml_doc)
-    parse_send_xml_tree(gmp, xml_tree)
-
-    print('\n  Task(s) sent!\n')
+    xml_tree = create_xml_tree(script_args.xml)
+    tasks = parse_send_xml_tree(gmp, xml_tree)
+    for task in tasks:
+        print(task)
+    print('\nTask(s) sent!\n')
 
 
 if __name__ == '__gmp__':
-    main(gmp, args)
+    main(gmp, args)  # pylint: disable=undefined-variable

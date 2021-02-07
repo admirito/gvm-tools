@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2018-2019 Greenbone Networks GmbH
+# Copyright (C) 2017-2021 Greenbone Networks GmbH
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -17,13 +17,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-
-from lxml import etree as e
+from gvmtools.helper import create_xml_tree
 
 
 def check_args(args):
     len_args = len(args.script) - 1
-    if len_args is not 1:
+    if len_args != 1:
         message = """
         This script pulls schedule data from an xml document and feeds it to \
     a desired GSM
@@ -33,33 +32,14 @@ def check_args(args):
 
         Example:
             $ gvm-script --gmp-username name --gmp-password pass \
-    ssh --hostname <gsm> scripts/send-schedules.gmp.py targethost example_file.xml
+    ssh --hostname <gsm> scripts/send-schedules.gmp.py example_file.xml
 
         """
         print(message)
-        quit()
+        sys.exit()
     if int(gmp.get_protocol_version()[0]) < 8:
         print("This script requires GMP version 8")
-        quit()
-
-
-def error_and_exit(msg):
-    print("Error: {}\n".format(msg), file=sys.stderr)
-    sys.exit(1)
-
-
-def create_xml_tree(xml_doc):
-    try:
-        xml_tree = e.parse(xml_doc)
-        xml_tree = e.tostring(xml_tree)
-        xml_tree = e.XML(xml_tree)
-    except IOError as err:
-        error_and_exit("Failed to read xml_file: {} (exit)".format(str(err)))
-
-    if len(xml_tree) == 0:
-        error_and_exit("XML file is empty (exit)")
-
-    return xml_tree
+        sys.exit()
 
 
 def parse_send_xml_tree(gmp, xml_tree):
@@ -72,10 +52,10 @@ def parse_send_xml_tree(gmp, xml_tree):
 
         ical = schedule.find('icalendar').text
 
-        timezone_abbrev = schedule.find('timezone_abbrev').text
+        timezone = schedule.find('timezone').text
 
         gmp.create_schedule(
-            name=name, comment=comment, timezone=timezone_abbrev, icalendar=ical
+            name=name, comment=comment, timezone=timezone, icalendar=ical
         )
 
 

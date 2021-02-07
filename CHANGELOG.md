@@ -13,6 +13,63 @@ or get the entire source code repository and view log history:
 $ git clone https://github.com/greenbone/gvm-tools.git
 $ cd gvm-tools && git log
 ```
+
+## [21.1.0] - 2021-01-20
+### Added
+* Added `pretty_print` to `pyshell` by default, so it does not need to be manually imported [#305](https://github.com/greenbone/gvm-tools/pull/305)
+* Added tests for `helper` module [#310](https://github.com/greenbone/gvm-tools/pull/310)
+* Added tests for `parser` module [#311](https://github.com/greenbone/gvm-tools/pull/311)
+* Added tests for `scripts/send-target.gmp.py` [#314](https://github.com/greenbone/gvm-tools/pull/314/)
+* Added tests for `scripts/send-tasks.gmp.py` [#317](https://github.com/greenbone/gvm-tools/pull/317)
+* Added tests for `scripts/send-schedules.gmp.py` [#344](https://github.com/greenbone/gvm-tools/pull/344)
+* Added tests for `script/start-alert-scan.gmp.py` [#344](https://github.com/greenbone/gvm-tools/pull/344)
+* Adding useful script helper functions to the `helper.py` [#317](https://github.com/greenbone/gvm-tools/pull/317)
+* CI tests Python 3.9 now. [#353](https://github.com/greenbone/gvm-tools/pull/353)
+* Added tests for `script/combine-reports.gmp.py` [#366](https://github.com/greenbone/gvm-tools/pull/366)
+
+### Changed
+* The `script/start-alert-scan.gmp.py` has been reworked with argparser [#344](https://github.com/greenbone/gvm-tools/pull/344)
+* Moved generic functions to generate random ids and ips from scripts to the `helper` module. [#365](https://github.com/greenbone/gvm-tools/pull/365)
+
+### Deprecated
+* Dropped Python 3.5 and Python 3.6 support. Python 3.7+ is required now. [#353](https://github.com/greenbone/gvm-tools/pull/353)
+
+### Fixed
+* Fixed the `send-targets.gmp.py` script. [#313](https://github.com/greenbone/gvm-tools/pull/313)
+* Fixed the `pdf-report.gmp.py` script when an empty report is downloaded [#328](https://github.com/greenbone/gvm-tools/pull/328)
+* Fixed the `combine-reports.gmp.py` script, the `import_report()` command changed since v9.0. [#366](https://github.com/greenbone/gvm-tools/pull/366)
+
+[21.1.0]: https://github.com/greenbone/gvm-tools/compare/v20.10.1...v21.1.0
+
+## [20.10.1] - 2020-10-06
+### Fixed
+
+- Reverted changes in the dependency that causes CI failures.
+
+[20.10.1]: https://github.com/greenbone/gvm-tools/compare/v20.10.0...HEAD
+
+## [20.10.0] - 2020-10-05
+
+### Changed
+
+- Fixed `send-schedule.gmp.py` script, because <timezone_abbrev> has been [removed](https://github.com/greenbone/gvmd/commit/d4a0fa2287b425199330b7e5671b61cdbd836fe4) from Schedules, using <timezone> instead. [#299](https://github.com/greenbone/gvm-tools/pull/299)
+- Fixed `send-targets.gmp.py` script, because alive_test needs to be from `AliveTest` enum in `create_target` function. [#297](https://github.com/greenbone/gvm-tools/pull/297)
+- Added gmpv20.08 support to the `scan-new-system.gmp.py` script, as `create_target` requires an argument `port_range` or `port_list_id` now. [#295](https://github.com/greenbone/gvm-tools/pull/295)
+
+- Using the `--log` argument is not casesensitive anymore. Use the lower-case or upper-case loglevel as the argument now.[PR 276](https://github.com/greenbone/gvm-tools/pull/276)
+
+### Fixed
+
+- Fixed the `check-gmp.gmp.py` script, as it was not compatible to Python 3.5 anymore. [PR 280](https://github.com/greenbone/gvm-tools/pull/280)
+- Fixed the `check-gmp.gmp.py` script: results have not been loaded with `-F host -T task --status` and probably some other cases. Added `details=True` to the command that requests the report. [PR 280](https://github.com/greenbone/gvm-tools/pull/280)
+- Fixed the `pdf-report.gmp.py` script. Joining the Content of the tag was not the correct way here ... we needed the tail of the `<report_format>` tag ... [PR 301](https://github.com/greenbone/gvm-tools/pull/301)
+### Removed
+
+* Removed `gvm.version` module in favor of using `pontos.version`
+  [#254](https://github.com/greenbone/gvm-tools/pull/254)
+
+[20.10.0]: https://github.com/greenbone/gvm-tools/compare/v2.1.0...v20.10.0
+
 ## [2.1.0] - 2020-04-03
 
 ### Added
@@ -43,8 +100,6 @@ $ cd gvm-tools && git log
 - Catch exception from gvm lib [PR 222](https://github.com/greenbone/gvm-tools/pull/222) [PR 224](https://github.com/greenbone/gvm-tools/pull/224)
 - Fixed `send-targets.gmp` throwing an exception due to an improper check [PR 248](https://github.com/greenbone/gvm-tools/pull/248)
 - Fixed `send-targets.gmp` : `hosts` and `exclude_hosts` expecting lists [PR 248](https://github.com/greenbone/gvm-tools/pull/248)
-
-### Removed
 
 [2.1.0]: https://github.com/greenbone/gvm-tools/compare/v2.0.0...v2.1.0
 

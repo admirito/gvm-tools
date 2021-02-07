@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2019 Greenbone Networks GmbH
+# Copyright (C) 2019-2021 Greenbone Networks GmbH
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -20,6 +20,8 @@ from gvmtools.helper import Table
 
 
 def main(gmp, args):
+    # pylint: disable=unused-argument
+
     response_xml = gmp.get_tasks()
     tasks_xml = response_xml.xpath('task')
 
