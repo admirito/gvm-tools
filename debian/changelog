@@ -1,3 +1,9 @@
+gvm-tools (21.1.0-1) focal; urgency=medium
+
+  * Import upstream version 21.1.0
+
+ -- Mohammad Razavi <mrazavi64@gmail.com>  Sun, 07 Feb 2021 18:37:21 +0330
+
 gvm-tools (2.1.0-1) focal; urgency=medium
 
   * Import upstream version 2.1.0
