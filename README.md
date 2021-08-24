@@ -5,12 +5,12 @@
 [![PyPI release](https://img.shields.io/pypi/v/gvm-tools.svg)](https://pypi.org/project/gvm-tools/)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/greenbone/gvm-tools/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/greenbone/gvm-tools/?branch=master)
 [![code test coverage](https://codecov.io/gh/greenbone/gvm-tools/branch/master/graph/badge.svg)](https://codecov.io/gh/greenbone/gvm-tools)
-[![CircleCI](https://circleci.com/gh/greenbone/gvm-tools/tree/master.svg?style=svg)](https://circleci.com/gh/greenbone/gvm-tools/tree/master)
+[![Build and test](https://github.com/greenbone/gvm-tools/actions/workflows/ci-python.yml/badge.svg)](https://github.com/greenbone/gvm-tools/actions/workflows/ci-python.yml)
 
 The Greenbone Vulnerability Management Tools `gvm-tools`
 are a collection of tools that help with remote controlling a
 Greenbone Security Manager (GSM) appliance and its underlying Greenbone
-Vulnerability Manager (GVM). The tools aid in accessing the
+Vulnerability Management (GVM) framework. The tools aid in accessing the
 communication protocols GMP (Greenbone Management Protocol) and OSP
 (Open Scanner Protocol).
 
@@ -23,16 +23,17 @@ Python.
 ## Table of Contents <!-- omit in toc -->
 - [Documentation](#documentation)
 - [Installation](#installation)
+  - [Version](#version)
   - [Requirements](#requirements)
   - [Install using pip](#install-using-pip)
 - [Usage](#usage)
   - [gvm-cli](#gvm-cli)
-    - [Example program use](#example-program-use)
+    - [Examples](#examples)
   - [gvm-script](#gvm-script)
     - [Example script](#example-script)
     - [More example scripts](#more-example-scripts)
   - [gvm-pyshell](#gvm-pyshell)
-    - [Example program use](#example-program-use-1)
+    - [Example program use](#example-program-use)
 - [Support](#support)
 - [Maintainer](#maintainer)
 - [Contributing](#contributing)
@@ -56,7 +57,9 @@ Please consider to always use the **newest** version of `gvm-tools` and `python-
 We freqently update this projects to add features and keep them free from bugs.
 This is why installing `gvm-tools` using pip is recommended.
 
-The current release of `gvm-tools` can be used with all supported GOS versions.
+**To use `gvm-tools` with an old GMP version (7, 8, 9) you must use a release version**
+**that is `<21.06`, combined with an `python-gvm` version `<21.05`.**
+**In the `21.06` release the support of these older versions has been dropped.**
 
 ### Requirements
 
@@ -101,7 +104,7 @@ gvm-cli --gmp-username foo --gmp-password bar socket --xml "<get_tasks/>"
 Read a file with GMP commands and return the result:
 
 ```
-gvm-cli --gmp-username foo --gmp-password bar socket < myfile.xml
+gvm-cli --gmp-username foo --gmp-password bar socket myfile.xml
 ```
 
 Note that `gvm-cli` will by default print an error message and exit with a

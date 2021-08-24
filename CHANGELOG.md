@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to [Calendar Versioning](https://calver.org).
 
 For detailed code changes, please visit
 https://github.com/greenbone/gvm-tools/commits/master
@@ -13,6 +13,27 @@ or get the entire source code repository and view log history:
 $ git clone https://github.com/greenbone/gvm-tools.git
 $ cd gvm-tools && git log
 ```
+
+## [21.6.1] - 2021-06-21
+### Fixed
+* Fixed the GMP authentication for `gvm-cli`. [#472](https://github.com/greenbone/gvm-tools/pull/472)
+
+[21.6.1]: https://github.com/greenbone/gvm-tools/compare/v21.6.0...v21.6.1
+
+## [21.6.0] - 2021-06-13
+### Added
+* Added new script `script/create-consolidated-reports.gmp.py`, that consolidates the last reports of tasks filtered by time period and tags [#370](https://github.com/greenbone/gvm-tools/pull/370)
+* Added new script `script/create-cve-report-from-json.gmp.py` that generates an CVE Report from an correctly formatted JSON. [#376](https://github.com/greenbone/gvm-tools/pull/376)
+* Added script bulk-modify-schedules.gmp.py [#445](https://github.com/greenbone/gvm-tools/pull/445)
+
+### Changed
+* Added `in_asset` argument to `import_report()` to `script/combine-reports.gmp.py` [#383](https://github.com/greenbone/gvm-tools/pull/383)
+
+### Fixed
+* Added ignore_pagination to get_report calls in `script/create-consolidated-reports.gmp.py` and `script/combine-reports.gmp.py` [#399]https://github.com/greenbone/gvm-tools/pull/399)
+* Fixed Python 3.8 SyntaxWarnings for scripts [#373](https://github.com/greenbone/gvm-tools/pull/373)
+
+[21.6.0]: https://github.com/greenbone/gvm-tools/compare/v21.1.0...v21.6.0
 
 ## [21.1.0] - 2021-01-20
 ### Added

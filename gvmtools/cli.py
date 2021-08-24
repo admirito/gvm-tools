@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2018 Greenbone Networks GmbH
+# Copyright (C) 2018-2021 Greenbone Networks GmbH
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import getpass
 import logging
 import sys
 import time
@@ -27,7 +26,7 @@ from gvm.protocols.gmp import Gmp
 from gvm.transforms import CheckCommandTransform
 from gvm.xml import validate_xml_string, pretty_print
 
-from gvmtools.helper import do_not_run_as_root
+from gvmtools.helper import authenticate, do_not_run_as_root
 from gvmtools.parser import (
     create_parser,
     create_connection,
@@ -47,7 +46,7 @@ HELP_TEXT = """
 
       gvm-cli socket --xml "<get_version/>"
       gvm-cli socket --xml "<commands><authenticate><credentials><username>myuser</username><password>mypass</password></credentials></authenticate><get_tasks/></commands>"
-      gvm-cli socket --gmp-username foo --gmp-password foo < myfile.xml
+      gvm-cli socket --gmp-username foo --gmp-password foo myfile.xml
 
     The protocol specifications for GMP and OSP are available at:
       https://docs.greenbone.net/index.html#api_documentation"""
@@ -127,13 +126,7 @@ def main():
 
             if args.protocol == PROTOCOL_GMP:
                 # Ask for password if none are given
-                if args.gmp_username and not args.gmp_password:
-                    args.gmp_password = getpass.getpass(
-                        'Enter password for ' + args.gmp_username + ': '
-                    )
-
-                if args.gmp_username:
-                    protocol.authenticate(args.gmp_username, args.gmp_password)
+                authenticate(protocol, args.gmp_username, args.gmp_password)
 
             if args.duration:
                 starttime = time.time()
@@ -142,14 +135,14 @@ def main():
 
             if args.duration:
                 duration = time.time() - starttime
-                print('Elapsed time: {} seconds'.format(duration))
+                print(f'Elapsed time: {duration} seconds')
             elif args.pretty:
                 pretty_print(result)
             else:
                 print(result)
 
     except Exception as e:  # pylint: disable=broad-except
-        print(e, file=sys.stderr)
+        logger.error(e)
         sys.exit(1)
     sys.exit(0)
 

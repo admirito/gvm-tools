@@ -18,13 +18,15 @@
 
 import sys
 import time
+from argparse import Namespace
+from gvm.protocols.gmp import Gmp
 
 from gvmtools.helper import error_and_exit
 
 
 def check_args(args):
     len_args = len(args.script) - 1
-    if len_args is not 2:
+    if len_args != 2:
         message = """
         This script pulls hostnames from a text file and creates a target \
 for each.
@@ -68,7 +70,7 @@ def send_targets(gmp, host_name, host_file, host_list):
         gmp.create_target(name=name, comment=comment, hosts=hosts)
 
 
-def main(gmp, args):
+def main(gmp: Gmp, args: Namespace) -> None:
     # pylint: disable=undefined-variable
 
     check_args(args)

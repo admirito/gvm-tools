@@ -19,6 +19,9 @@
 import sys
 import time
 
+from argparse import Namespace
+from gvm.protocols.gmp import Gmp
+
 from gvmtools.helper import error_and_exit
 
 
@@ -78,7 +81,7 @@ def copy_send_target(gmp, hosts_file, old_target_id):
     objects = ('reverse_lookup_only', 'reverse_lookup_unify', 'name')
     for obj in objects:
         var = old_target.xpath('{}/text()'.format(obj))[0]
-        if var is '0':
+        if var == '0':
             var = ''
         keywords['{}'.format(obj)] = var
 
@@ -111,7 +114,7 @@ def check_to_delete(gmp, target_id):
         gmp.delete_target(target_id=target_id)
 
 
-def main(gmp, args):
+def main(gmp: Gmp, args: Namespace) -> None:
     # pylint: disable=undefined-variable
 
     check_args(args)
