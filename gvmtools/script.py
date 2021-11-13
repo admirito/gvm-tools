@@ -18,6 +18,7 @@
 
 import os
 import sys
+import traceback
 
 from argparse import Namespace
 
@@ -86,7 +87,7 @@ def main():
     try:
         with protocol_class(connection, transform=transform) as protocol:
             global_vars[name] = protocol
-            global_vars['__name__'] = '__{}__'.format(name)
+            global_vars['__name__'] = f'__{name}__'
 
             if args.protocol == PROTOCOL_GMP:
                 if args.gmp_username:
@@ -112,8 +113,8 @@ def main():
 
             run_script(args.scriptname, global_vars)
 
-    except Exception as e:  # pylint: disable=broad-except
-        print(e, file=sys.stderr)
+    except Exception:  # pylint: disable=broad-except
+        print(traceback.format_exc())
         sys.exit(1)
 
     sys.exit(0)
